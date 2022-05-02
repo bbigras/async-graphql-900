@@ -1,0 +1,13 @@
+[package]
+name = "async-graphql-900"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+async-graphql = { version = "3.0.7", features = [ "chrono", "opentelemetry", "dataloader", "log", "tracing" ] }
+async-graphql-axum = "3.0.38"
+axum = "0.5.3"
+tokio = { version = "1.17.0", features = [ "full" ] }
