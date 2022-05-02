@@ -1,39 +1,47 @@
-use anyhow::{anyhow, ensure, Context as Context3, Error};
+use anyhow::Error;
 use async_graphql::dataloader::DataLoader;
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-use async_graphql::{
-    ComplexObject, Context, EmptySubscription, Enum, InputObject, InputValueError,
-    InputValueResult, Interface, Object, Scalar, ScalarType, Schema, SimpleObject, ID,
-};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-// use async_graphql::{Context, Enum, Interface, Object, SimpleObject, ID};
+use async_graphql::{ComplexObject, Context, Interface, Object, SimpleObject};
+
+use crate::loaders::{PlayerLoader, TeamLoader};
 
 #[derive(Clone, Interface)]
-#[graphql(field(name = "teams", type = "Vec<String>"))]
+#[graphql(
+    field(name = "name", type = "String"),
+    field(name = "teams", type = "Vec<Team>")
+)]
 pub enum IServer {
     SquadServer(SquadServer),
-    // PsServer(PsServer),
 }
 
 #[derive(Clone, Default, SimpleObject)]
 #[graphql(complex)]
 pub struct SquadServer {
-    pub id: ID,
+    pub name: String,
 }
-
-// impl SquadServer {
-//     fn consume_a2s_info(&mut self, v: query2::A2sInfo) {
-//         self.map = v.map;
-//         // self.version = v.version;
-//         self.slots = v.slots;
-//     }
-
-// }
 
 #[ComplexObject]
 impl SquadServer {
-    async fn teams<'a>(&self, _ctx: &'a Context<'_>) -> Vec<String> {
-        vec!["Team1".to_string(), "Team2".to_string()]
+    async fn teams<'a>(&self, ctx: &'a Context<'_>) -> Result<Vec<Team>, Error> {
+        let loader = ctx.data_unchecked::<DataLoader<TeamLoader>>();
+        let key = "my_key".to_string();
+        let r = loader.load_one(key).await.unwrap().unwrap_or_default();
+        Ok(r)
+    }
+}
+
+#[derive(Clone, Default, SimpleObject)]
+#[graphql(complex)]
+pub struct Team {
+    pub name: String,
+}
+
+#[ComplexObject]
+impl Team {
+    async fn players<'a>(&self, ctx: &'a Context<'_>) -> Result<Vec<String>, Error> {
+        let loader = ctx.data_unchecked::<DataLoader<PlayerLoader>>();
+        let key = "my_key".to_string();
+        let r = loader.load_one(key).await.unwrap().unwrap_or_default();
+        Ok(r)
     }
 }
 
@@ -41,13 +49,14 @@ pub struct Query;
 
 #[Object]
 impl Query {
-    // #[tracing::instrument(skip(self, ctx))]
-    async fn server_by_name(&self, ctx: &Context<'_>, name: String) -> Result<IServer, Error> {
-        // info!("get_server_by_name");
+    async fn servers(&self, _ctx: &Context<'_>) -> Result<Vec<IServer>, Error> {
+        let mut list = vec![];
 
-        let r = IServer::SquadServer(SquadServer {
-            id: ID("123".to_string()),
-        });
-        Ok(r)
+        for i in 0..2 {
+            let name = format!("server-{}", i);
+            list.push(IServer::SquadServer(SquadServer { name }));
+        }
+
+        Ok(list)
     }
 }

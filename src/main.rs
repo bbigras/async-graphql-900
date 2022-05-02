@@ -1,6 +1,8 @@
+mod loaders;
 mod query;
 
 use async_graphql::{
+    dataloader::DataLoader,
     http::{playground_source, GraphQLPlaygroundConfig},
     EmptyMutation, EmptySubscription, Schema,
 };
@@ -11,8 +13,9 @@ use axum::{
     routing::get,
     Router, Server,
 };
+use loaders::TeamLoader;
 
-use crate::query::Query;
+use crate::{loaders::PlayerLoader, query::Query};
 
 type MySchema = Schema<Query, EmptyMutation, EmptySubscription>;
 
@@ -27,7 +30,8 @@ async fn graphql_playground() -> impl IntoResponse {
 #[tokio::main]
 async fn main() {
     let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
-        // .data(StarWars::new())
+        .data(DataLoader::new(TeamLoader {}, tokio::spawn))
+        .data(DataLoader::new(PlayerLoader {}, tokio::spawn))
         .finish();
 
     let app = Router::new()
